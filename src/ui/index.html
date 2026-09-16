@@ -1,0 +1,351 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root {
+        --bg: #1b1b1f;
+        --panel: rgba(36, 36, 42, 0.86);
+        --panel-br: rgba(255, 255, 255, 0.08);
+        --txt: #e9e9ec;
+        --txt-dim: #9a9aa3;
+        --on: #3b82f6;
+        --on-h: #5a9bff;
+        --on-txt: #fff;
+        --btn: rgba(255, 255, 255, 0.06);
+        --btn-h: rgba(255, 255, 255, 0.16);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--txt);
+        font:
+          11px/1.3 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      #app {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      #stage {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+      #stage.dragging::after {
+        content: "";
+        position: absolute;
+        inset: 6px;
+        border: 2px dashed var(--on);
+        border-radius: 8px;
+        pointer-events: none;
+      }
+      #canvas {
+        width: 100%;
+        height: 100%;
+        display: none;
+        cursor: grab;
+        touch-action: none;
+      }
+
+      #drop {
+        position: absolute;
+        inset: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 6px;
+        border: 1.5px dashed var(--panel-br);
+        border-radius: 10px;
+        color: var(--txt-dim);
+        cursor: pointer;
+        text-align: center;
+      }
+      #drop:hover {
+        border-color: var(--btn-h);
+        color: var(--txt);
+      }
+      #drop .big {
+        font-size: 13px;
+        color: var(--txt);
+      }
+
+      #loading {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        display: none; /* set to flex while decoding or cropping */
+        align-items: center;
+        justify-content: center;
+        background: rgba(20, 20, 24, 0.6);
+        color: var(--txt);
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        font-weight: 600;
+        /* pointer-events left as default (auto) so it blocks all input underneath */
+      }
+
+      /* corner overlays */
+      .ov {
+        position: absolute;
+        background: var(--panel);
+        border: 1px solid var(--panel-br);
+        border-radius: 8px;
+        padding: 4px;
+        display: flex;
+        gap: 4px;
+        backdrop-filter: blur(8px);
+        z-index: 2;
+      }
+      .tl {
+        top: 8px;
+        left: 8px;
+      }
+      .tc {
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        align-items: center;
+      }
+      .tc .zlabel {
+        color: var(--txt-dim);
+        padding: 0 2px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+      }
+      .tc .zlabel:hover {
+        color: var(--txt);
+      }
+      #viewzoom {
+        width: 92px;
+        accent-color: var(--on);
+        height: 16px;
+        cursor: pointer;
+      }
+      .tr {
+        top: 8px;
+        right: 8px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .bl {
+        bottom: 8px;
+        left: 8px;
+      }
+      .br {
+        bottom: 8px;
+        right: 8px;
+        padding: 0;
+        border: none;
+        background: none;
+        backdrop-filter: none;
+      }
+
+      .row {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+      }
+
+      button {
+        font: inherit;
+        color: var(--txt);
+        background: var(--btn);
+        border: 1px solid transparent;
+        border-radius: 5px;
+        padding: 4px 7px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      button:hover:not(:disabled) {
+        background: var(--btn-h);
+      }
+      button.on {
+        background: var(--on);
+        color: var(--on-txt);
+      }
+      button.on:hover:not(:disabled) {
+        background: var(--on-h);
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .sq {
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .sq svg {
+        display: block;
+        pointer-events: none;
+      }
+
+      .bl-lbl {
+        align-self: center;
+        color: var(--txt-dim);
+        font-weight: 600;
+        padding: 0 4px 0 2px;
+      }
+      #ratiomax {
+        width: auto;
+        padding: 0 7px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+
+      #crop {
+        background: var(--on);
+        color: var(--on-txt);
+        font-weight: 600;
+        padding: 8px 18px;
+        border-radius: 7px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      }
+      #crop:hover:not(:disabled) {
+        filter: brightness(1.08);
+      }
+
+      #bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 5px 10px;
+        border-top: 1px solid var(--panel-br);
+        color: var(--txt-dim);
+        min-height: 24px;
+      }
+      #status {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #hint {
+        color: var(--txt-dim);
+      }
+      #cslabel {
+        color: var(--txt-dim);
+        font-weight: 600;
+        padding: 2px 6px;
+        border: 1px solid var(--panel-br);
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+      #cslabel:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage">
+        <canvas id="canvas"></canvas>
+
+        <div id="drop">
+          <span class="big">Drop an image here</span>
+          <span>or click to browse</span>
+          <input id="file" type="file" accept="image/*" hidden />
+        </div>
+
+        <!-- fit -->
+        <div class="ov tl">
+          <button data-fit="cover">Cover</button>
+          <button data-fit="contain">Contain</button>
+          <button data-fit="none">1:1</button>
+        </div>
+
+        <!-- view zoom (preview only; does not affect output) -->
+        <div class="ov tc">
+          <span class="zlabel" id="viewicon" title="Reset zoom to fit"></span>
+          <input
+            id="viewzoom"
+            type="range"
+            min="0"
+            max="100"
+            value="50"
+            title="Zoom the preview (midpoint = fit) — out to drag past the edges, in for tight crops"
+          />
+        </div>
+
+        <!-- alignment (icons injected by ui.js) -->
+        <div class="ov tr">
+          <div class="row">
+            <button class="sq" data-ax="0" title="Align left"></button>
+            <button
+              class="sq"
+              data-ax="0.5"
+              title="Align horizontal center"
+            ></button>
+            <button class="sq" data-ax="1" title="Align right"></button>
+          </div>
+          <div class="row">
+            <button class="sq" data-ay="0" title="Align top"></button>
+            <button
+              class="sq"
+              data-ay="0.5"
+              title="Align vertical center"
+            ></button>
+            <button class="sq" data-ay="1" title="Align bottom"></button>
+          </div>
+        </div>
+
+        <!-- output resolution (× the slide; never upscales past the source, capped at 4096px) -->
+        <div class="ov bl">
+          <span
+            class="bl-lbl"
+            title="Export resolution — × the slide, capped at the source's native pixels"
+            >Export</span
+          >
+          <button class="sq" data-ratio="1">1x</button>
+          <button class="sq" data-ratio="2">2x</button>
+          <button class="sq" data-ratio="4">4x</button>
+          <!-- <button class="sq" data-ratio="8">8x</button> -->
+          <button
+            id="ratiomax"
+            data-ratio="max"
+            title="Native source resolution (max quality)"
+          >
+            MAX
+          </button>
+        </div>
+
+        <!-- crop -->
+        <div class="ov br">
+          <button id="crop" title="Crop (Enter)">Crop</button>
+        </div>
+      </div>
+
+      <div id="bar">
+        <span id="status"></span>
+        <span id="hint"></span>
+        <span id="cslabel" title="Detected colour space"></span>
+      </div>
+
+      <!-- blocking overlay shown while decoding or cropping -->
+      <div id="loading">LOADING</div>
+    </div>
+    <!--INLINE_SCRIPT-->
+  </body>
+</html>

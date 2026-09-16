@@ -1,0 +1,34 @@
+{
+  "name": "figma-plugin-big-image-crop",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "license": "MIT",
+  "author": {
+    "name": "Matt DesLauriers",
+    "url": "https://github.com/mattdesl"
+  },
+  "dependencies": {
+    "png-tools": "^1.0.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "prettier": "^3.8.4"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "test": "node --test",
+    "format": "prettier --write ."
+  },
+  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mattdesl/figma-plugin-big-image-crop.git"
+  },
+  "homepage": "https://github.com/mattdesl/figma-plugin-big-image-crop",
+  "bugs": {
+    "url": "https://github.com/mattdesl/figma-plugin-big-image-crop/issues"
+  }
+}

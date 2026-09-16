@@ -1,0 +1,12 @@
+{
+  "name": "Big Image Crop",
+  "id": "figma-plugin-big-image-crop",
+  "api": "1.0.0",
+  "main": "dist/main.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}
